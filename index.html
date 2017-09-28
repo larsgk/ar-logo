@@ -6,6 +6,9 @@ The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
 The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+
+Additional hacks made by Lars Knudsen / github.com/larsgk / @denladeside to make a virtual rubber duck & thingy 52 
+(code will be cleaned up ;))
 -->
 <!doctype html>
 <html lang="en">
@@ -72,10 +75,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     position: absolute;
     bottom: 20px;
     right: 20px;
-    width: 24px;
-    line-height: 24px;
+    width: 300px;
+    line-height: 30px;
     background: #666;
-    border-radius: 50%;
+    border-radius: 5px;
     color: #fff;
     font-weight: bold;
     text-align: center;
@@ -89,12 +92,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <body>
   <main id="markerInfo">
     <div class="marker-img-container">
-      <img src="marker/pattern-marker.png" alt="marker">
+      <img src="marker/nordicpatt3.png" alt="marker">
     </div>
     <p>Marker not detected</p>
   </main>
 
-  <a class="help-link" href="marker/">?</a>
+  <div class="help-link" onclick="doConnect()">CONNECT Thingy:52</div>
 
   <script>
   try {
@@ -187,7 +190,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       arToolkitContext.update( arToolkitSource.domElement )
       
       // update scene.visible if the marker is seen
-      scene.visible = camera.visible
+      scene.visible = camera.visible;
 
       markerInfo.classList.toggle('hidden', camera.visible)
     })
@@ -199,9 +202,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     // init controls for camera
     var markerControls = new THREEx.ArMarkerControls(arToolkitContext, camera, {
       type : 'pattern',
-      patternUrl : 'marker/pattern-marker.patt',
-      // patternUrl : 'lib/AR.js/data/patt.hiro',
-      // patternUrl : 'lib/AR.js/data/patt.kanji',
+      patternUrl : 'marker/nordic-marker.patt',  // new marker for thingy (nordic logo?/IT knows?)
       // as we controls the camera, set changeMatrixMode: 'cameraTransformMatrix'
       changeMatrixMode: 'cameraTransformMatrix'
     })
@@ -218,20 +219,158 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       side: THREE.DoubleSide
     });
 
+    var duckMaterial = new THREE.MeshPhongMaterial( { color: 0xffff00, specular: 0xffff00, shininess: 20, shading: THREE.SmoothShading } );
+
+    // remove or make other object...
     var loader = new THREE.OBJLoader(); 
-    loader.load('models/p-logo.obj', function ( object ) {
+    var duckObject = null;
+    loader.load('models/rubberduck.obj', function ( object ) {
       object.traverse( function ( child ) {
         if ( child instanceof THREE.Mesh ) {
-          child.material = material;
+          child.material = duckMaterial;
         }
       } );
 
-      // HACK(keanulee): AR.js assumes video source is 4:3, but we use a square canvas instead
-      // to handle portrait and landscape. This vertical scale accounts for that.
-      object.scale.y = 0.75;
-
+      object.scale.x = 0.5;
+      object.scale.y = 0.5 * 0.75;
+      object.scale.z = 0.5;
+      
       scene.add( object );
+      duckObject = object;
     });
+
+
+    let light = new THREE.PointLight( 0xffffff, 1, 100 );
+    light.position.set( 50, 50, 50 );
+    scene.add( light );
+    light = new THREE.PointLight( 0xffffff, 1, 100 );
+    light.position.set( -50, 50, 50 );
+    scene.add( light );
+    light = new THREE.PointLight( 0xffffff, 1, 100 );
+    light.position.set( 0, 80, 0 );
+    scene.add( light );
+
+
+    // console.log("line stuff...");
+    // var lineVer = [];
+
+    // function allocate_line(maxLength) 
+    // {
+    //     for (let i = 0; i < maxLength; i++)
+    //     {
+    //       lineVer.push(new THREE.Vector3((i/maxLength)-0.5, 1, 1)); 
+    //     }
+    //     return lineVer;
+    // }
+
+    // var line_geo = new THREE.Geometry();
+    // line_geo.vertices = allocate_line(32);
+    // line_geo.dynamic = true;
+
+    
+    // var line_object = new THREE.Line(line_geo, new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 3}));
+    //scene.add(line_object); // add later?
+
+
+    var canvas1 = document.createElement('canvas');
+    canvas1.width = 512;
+    canvas1.height = 512;
+    var context1 = canvas1.getContext('2d');
+
+    let pgeometry = new THREE.PlaneBufferGeometry( 0.7, 0.7 );
+    pgeometry.translate( 0, 0.6, 0.8);
+    let ptexture = new THREE.Texture(canvas1);
+    var pmaterial = new THREE.MeshBasicMaterial({ map: ptexture, side: THREE.DoubleSide });
+    pmaterial.transparent = true;
+
+    let plane = new THREE.Mesh( pgeometry, pmaterial );
+    scene.add( plane );
+
+    const updateTemperature = (temperature) => {
+      context1.clearRect(0,0,512,512);
+      context1.font = "Normal 130px Sans-serif";
+      context1.textAlign = 'center'
+      context1.fillStyle = "rgba(0,0,0,1)";
+      context1.fillText(`${temperature}`, 256, 300);
+
+      context1.beginPath();
+      context1.arc(256,256,170,0, 2 * Math.PI);
+
+      if(temperature < 26) {
+        context1.strokeStyle = `rgba(0,0,255,0.5)`;
+      } else if(temperature > 26) {
+        context1.strokeStyle = `rgba(255,0,0,0.5)`;
+      } else {
+        context1.strokeStyle = `rgba(255,255,255,0.5)`;
+      }
+
+      context1.lineWidth = 30;
+      context1.stroke();
+      
+      ptexture.needsUpdate = true;
+    }
+
+    updateTemperature(`0`);
+
+    // Level + bubble
+
+    // WebBluetooth Thingy:52 handling
+    // ef68040a-9b35-4933-9b10-52ffa9740042 - accelerometer
+    // TODO: Write temperature with https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_text_shapes.html
+    // TODO: Leveler/bubble - https://github.com/mrdoob/three.js/issues/644
+    // make rocket lander in 3D with thingy!!! - next version ;)
+
+    // function onAccelData(evt) {
+    //   let x = evt.target.value.getFloat32(0, true);
+    //   let y = evt.target.value.getFloat32(4, true);
+    //   let z = evt.target.value.getFloat32(8, true);
+    //   console.log('accel', x,y,z);
+
+    //   for(let idx=0;idx<lineVer.length-1;idx++)
+    //   {
+    //     lineVer[idx].y = lineVer[idx+1].y;
+    //   }
+    //   lineVer[lineVer.length-1].y = z / 10;
+
+    //   line_geo.verticesNeedUpdate = true;
+    // }
+
+    function onTemperatureData(evt){
+      console.log(evt);
+        let integer = evt.target.value.getUint8(0);
+        let decimal = evt.target.value.getUint8(1);
+        let temp = integer + '.' + decimal;
+        console.log('temperature: ' + temp);
+        //updateText(`${integer}°`);
+        updateTemperature(integer);
+    }
+
+    function doConnect() {
+      try {
+        navigator.bluetooth.requestDevice({
+            filters: [{ services: ['ef680100-9b35-4933-9b10-52ffa9740042'] }],
+            optionalServices: [
+              "ef680200-9b35-4933-9b10-52ffa9740042", 
+              "ef680300-9b35-4933-9b10-52ffa9740042",
+              "ef680400-9b35-4933-9b10-52ffa9740042",
+              "ef680500-9b35-4933-9b10-52ffa9740042"
+            ]
+        })
+        .then(device => device.gatt.connect())
+        .then(server => server.getPrimaryService('ef680200-9b35-4933-9b10-52ffa9740042'))
+        .then(service => service.getCharacteristic('ef680201-9b35-4933-9b10-52ffa9740042'))
+        .then(tempCharacteristic => tempCharacteristic.startNotifications())
+        .then(tempCharacteristic => tempCharacteristic.addEventListener('characteristicvaluechanged', onTemperatureData));
+
+
+        // .then(server => server.getPrimaryService('ef680400-9b35-4933-9b10-52ffa9740042'))
+        // .then(service => service.getCharacteristic('ef68040a-9b35-4933-9b10-52ffa9740042'))
+        // .then(accelCharacteristic => accelCharacteristic.startNotifications())
+        // .then(accelCharacteristic => accelCharacteristic.addEventListener('characteristicvaluechanged', onAccelData));
+      } catch(err) {
+        console.log(err);
+      }
+    }
 
     //////////////////////////////////////////////////////////////////////////////////
     //    render the whole thing on the page
@@ -246,26 +385,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     requestAnimationFrame(function animate(){
       // keep looping
       requestAnimationFrame( animate );
+      // updateLine();
       // call each update function
       onRenderFcts.forEach(function(onRenderFct){
         onRenderFct()
       })
     });
-  } catch (e) {}
-
-  // Google Analytics
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-39334307-22', 'auto');
-  ga('send', 'pageview');
+  } catch (e) { console.log('error',e);}
 
   // Service worker registration
   if ('serviceWorker' in window.navigator) {
     window.addEventListener('load', function() {
-      window.navigator.serviceWorker.register('sw.js')
+      // window.navigator.serviceWorker.register('sw.js')
     });
   }
   </script>
